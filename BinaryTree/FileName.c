@@ -1,27 +1,26 @@
-ï»¿#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
-#include <stdbool.h>
 
 /*
 Projekt nr 4.
 
-Zaimplementuj obsÅ‚ugÄ™ struktury danych â€ždrzewo binarneâ€.
+Zaimplementuj obs³ugê struktury danych „drzewo binarne”.
 
-Napisz funkcje realizujÄ…ce nastÄ™pujÄ…ce funkcjonalnoÅ›ci:
+Napisz funkcje realizuj¹ce nastêpuj¹ce funkcjonalnoœci:
 - inicjowanie drzewa,
-- dodawanie nowego elementu w okreÅ›lonym miejscu drzewa,
-- pobieranie (i usuniÄ™cie) konkretnego elementu z drzewa,
-? pobranie w sensie Å¼e element zostaje usuniÄ™ty z drzewa i zwrÃ³cony do programu, czy poprostu zostaje usuniÄ™ty?
+- dodawanie nowego elementu w okreœlonym miejscu drzewa,
+- pobieranie (i usuniêcie) konkretnego elementu z drzewa,
+? pobranie w sensie ¿e element zostaje usuniêty z drzewa i zwrócony do programu, czy poprostu zostaje usuniêty?
 - wyszukanie podanego elementu,
-? wyszukanie w sensie Å¼e element zostaje zwrÃ³cony do programu, czy poprostu sprawdzamy czy istnieje?
-- wypisanie wszystkich elementÃ³w drzewa,
-- usuniÄ™cie caÅ‚ej struktury (wszystkich elementÃ³w) â€“ zwolnienie pamiÄ™ci;
-- zakoÅ„czenie programu - usuniÄ™cie wszystkich elementÃ³w;
+? wyszukanie w sensie ¿e element zostaje zwrócony do programu, czy poprostu sprawdzamy czy istnieje?
+- wypisanie wszystkich elementów drzewa,
+- usuniêcie ca³ej struktury (wszystkich elementów) – zwolnienie pamiêci;
+- zakoñczenie programu - usuniêcie wszystkich elementów;
 - zapis struktury do pliku binarnego,
 - odczyt struktury z pliku binarnego,
 
-ÅÄ…czenie elementÃ³w w drzewo powinno odbywaÄ‡ siÄ™ przez wskaÅºniki.
+£¹czenie elementów w drzewo powinno odbywaæ siê przez wskaŸniki.
 */
 
 typedef struct Node {
@@ -37,11 +36,8 @@ Node* initTree() {
 Node* addNode(Node* root, int value) {
     if (root == NULL) {
         Node* newNode = (Node*)malloc(sizeof(Node));
-        if (!newNode) {
-            fprintf(stderr, "nie moÅ¼na zalokowaÄ‡ pamiÄ™ci dla nowego wÄ™zÅ‚a\n");
-            exit(EXIT_FAILURE);
-        }
-        newNode->value = value;
+        if (newNode)
+            newNode->value = value;
         newNode->left = NULL;
         newNode->right = NULL;
         return newNode;
@@ -60,18 +56,22 @@ Node* removeNode(Node* root, int value) {
     if (root == NULL) return NULL;
     if (value < root->value) {
         root->left = removeNode(root->left, value);
-    } else if (value > root->value) {
+    }
+    else if (value > root->value) {
         root->right = removeNode(root->right, value);
-    } else {
+    }
+    else {
         if (root->left == NULL) {
             Node* temp = root->right;
             free(root);
             return temp;
-        } else if (root->right == NULL) {
+        }
+        else if (root->right == NULL) {
             Node* temp = root->left;
             free(root);
             return temp;
-        } else {
+        }
+        else {
             Node* succParent = root;
             Node* succ = root->right;
             while (succ->left != NULL) {
@@ -111,46 +111,29 @@ void freeTree(Node* root) {
     free(root);
 }
 
-void reportError(const char* message) {
-    fprintf(stderr, "%s\n", message);
-	exit(EXIT_FAILURE);
-}
-
 void saveTree(FILE* file, Node* root) {
     if (root == NULL) {
-        bool marker = false;
-        if (fwrite(&marker, sizeof(bool), 1, file) != 1) {
-            reportError("BÅ‚Ä…d zapisu markera do pliku");
-        }
+        int marker = 0;
+        fwrite(&marker, sizeof(int), 1, file);
         return;
     }
-    bool marker = true;
-    if (fwrite(&marker, sizeof(bool), 1, file) != 1) {
-		reportError("BÅ‚Ä…d zapisu markera do pliku");
-    }
-    if (fwrite(&root->value, sizeof(int), 1, file) != 1) {
-		reportError("BÅ‚Ä…d zapisu wartoÅ›ci do pliku");
-    }
+    int marker = 1;
+    fwrite(&marker, sizeof(int), 1, file);
+    fwrite(&root->value, sizeof(int), 1, file);
     saveTree(file, root->left);
     saveTree(file, root->right);
 }
 
 Node* loadTree(FILE* file) {
-    bool marker;
-    if (fread(&marker, sizeof(bool), 1, file) != 1) {
-        if (feof(file)) return NULL;
-        reportError("BÅ‚Ä…d odczytu markera z pliku");
-    }
-    if (marker == false)
+    int marker;
+    if (fread(&marker, sizeof(int), 1, file) != 1)
+        return NULL;
+    if (marker == 0)
         return NULL;
     int value;
-    if (fread(&value, sizeof(int), 1, file) != 1) {
-        reportError("BÅ‚Ä…d odczytu wartoÅ›Ä‡i z pliku");
-    }
+    if (fread(&value, sizeof(int), 1, file) != 1)
+        return NULL;
     Node* node = (Node*)malloc(sizeof(Node));
-    if (!node) {
-		reportError("BÅ‚Ä…d alokacji pamiÄ™ci podczas odczytu drzewa");
-    }
     node->value = value;
     node->left = loadTree(file);
     node->right = loadTree(file);
@@ -175,7 +158,7 @@ int main(int argc, char* argv[])
     printTree(tree);
 
     Node* found = findNode(tree, 3);
-    if(found != NULL)
+    if (found != NULL)
         printf("\nznaleziono: %d\n", found->value);
     else
         printf("nie znaleziono\n");
@@ -196,11 +179,8 @@ int main(int argc, char* argv[])
         saveTree(file, tree);
         fclose(file);
     }
-    else {
-        fprintf(stderr, "Nie moÅ¼na otworzyÄ‡ pliku do zapisu.\n");
-        freeTree(tree);
-        return 1;
-    }
+    else
+        printf("Nie mo¿na otworzyæ pliku do zapisu.\n");
 
     freeTree(tree);
 
@@ -208,15 +188,14 @@ int main(int argc, char* argv[])
         file = NULL;
     }
 
+    file = fopen("tree.bin", "rb");
     if (file != NULL) {
         Node* loadedTree = loadTree(file);
         fclose(file);
-        printf("ZaÅ‚adowane drzewo\n");
+        printf("Za³adowane drzewo\n");
         printTree(loadedTree);
         printf("\n");
         freeTree(loadedTree);
-    } else {
-        fprintf(stderr, "Nie moÅ¼na otworzyÄ‡ pliku do odczytu.\n");
     }
 
     return 0;
