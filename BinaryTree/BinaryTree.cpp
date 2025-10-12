@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <stdbool.h>
-#include <errno.h>
 
 #define MAX_STRING_INPUT_LENGTH 100 //Windows ma ograniczenie do 255 znaków
 
@@ -187,22 +186,19 @@ int safeReadInt() {
     char buf[100];
     long val;
     char* endptr;
-    errno = 0;
 
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        printf("Błąd odczytu!\n");
-        exit(1);
+    while (1) {
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            printf("Błąd odczytu\n");
+            continue;
+        }
+        val = strtol(buf, &endptr, 10);
+        if (endptr == buf || (*endptr != '\n' && *endptr != '\0')) {
+            printf("Niepoprawny format liczby\nSpróbuj ponownie: ");
+            continue;
+        }
+        return (int)val;
     }
-    val = strtol(buf, &endptr, 10);
-    if (errno == ERANGE || val > INT_MAX || val < INT_MIN) {
-        printf("Liczba poza zakresem typu int!\n");
-        exit(1);
-    }
-    if (endptr == buf || *endptr != '\n') {
-        printf("Niepoprawny format liczby!\n");
-        exit(1);
-    }
-    return (int)val;
 }
 
 void safeReadString(char* buffer) {
@@ -240,14 +236,18 @@ int main(int argc, char* argv[])
 		printf("2. Usuń węzeł\n");
 		printf("3. Znajdź węzeł\n");
 		printf("4. Wypisz drzewo\n");
-		printf("5. Zapisz drzewo do pliku\n");
-		printf("6. Wczytaj drzewo z pliku\n");
-		printf("7. Zakończ program\n");
+		printf("5. Usuń drzewo\n");
+		printf("6. Zapisz drzewo do pliku\n");
+		printf("7. Wczytaj drzewo z pliku\n");
+		printf("8. Zakończ program\n");
 
 		int choice = safeReadInt();
-        if (choice >= 1 && choice <= 7) {
-            switch (choice)
-            {
+
+        system("cls");
+
+
+        switch (choice)
+        {
             case 1: {
                 printf("Podaj wartość do dodania: ");
                 int value = safeReadInt();
@@ -273,12 +273,18 @@ int main(int argc, char* argv[])
                 break;
             }
             case 4: {
-                printf("Elementy drzewa (in-order): ");
+                printf("Elementy drzewa w kolejności rosnącej: ");
                 printTree(tree);
                 printf("\n");
                 break;
             }
             case 5: {
+                freeTree(tree);
+                tree = NULL;
+                printf("Usunięto całe drzewo.\n");
+                break;
+		    }
+            case 6: {
                 printf("Podaj nazwę pliku do zapisu (zakończoną .bin): ");
                 char filename[MAX_STRING_INPUT_LENGTH];
                 while (true)
@@ -327,7 +333,7 @@ int main(int argc, char* argv[])
                 printf("Drzewo zapisane do pliku %s\n", filename);
                 break;
             }
-            case 6:
+            case 7:
             {
                 printf("Podaj nazwę pliku do wczytania z rozszerzeniem .bin: ");
                 char filename[MAX_STRING_INPUT_LENGTH];
@@ -349,7 +355,7 @@ int main(int argc, char* argv[])
                     break;
 
                 }
-				FILE* file = fopen(filename, "rb");
+			    FILE* file = fopen(filename, "rb");
                 if (!file) {
                     printf("Nie można otworzyć pliku do odczytu!\n");
                     break;
@@ -358,16 +364,22 @@ int main(int argc, char* argv[])
                 tree = loadTree(file);
                 fclose(file);
                 printf("Drzewo wczytane z pliku %s\n", filename);
-				break;
+			    break;
             }
+            case 8:
+            {
+                freeTree(tree);
+                printf("Zakończenie programu.\n");
+                return 0;
+		    }
             default:
             {
-                break;
-            }}
-		}
-        else {
-            printf("Niepoprawny wybór, spróbuj ponownie.\n");
+                printf("Niepoprawny wybór, spróbuj ponownie.\n");
+            }
         }
+
+        printf("\n");
+
     }
 
     return 0;
