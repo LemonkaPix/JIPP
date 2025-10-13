@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <stdbool.h>
+#include <errno.h>
 
-#define MAX_STRING_INPUT_LENGTH 100 //Windows ma ograniczenie do 255 znaków
+#define MAX_STRING_INPUT_LENGTH 100 //Windows ma ograniczenie do 255 znaków dla nazwy plików
 
 /*
 Projekt nr 4.
@@ -34,7 +35,7 @@ typedef struct Node {
 
 int isReservedWindowsName(const char* name) {
     const char* reserved[] = {
-        "CON", "PRN", "AUX", "NUL",
+        "CON", "PRN", "AUX", "NUL", "CLOCK$",
         "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
         "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
     };
@@ -43,7 +44,7 @@ int isReservedWindowsName(const char* name) {
     while (name[len] && name[len] != '.' && len < 31) ++len;
 
     for (int i = 0; i < sizeof(reserved) / sizeof(reserved[0]); ++i) {
-        if (strlen(reserved[i]) == len && strnicmp(name, reserved[i], len) == 0)
+        if (strlen(reserved[i]) == len && _strnicmp(name, reserved[i], len) == 0)
             return 1;
     }
     return 0;
@@ -51,7 +52,7 @@ int isReservedWindowsName(const char* name) {
 
 void reportError(const char* message) {
     fprintf(stderr, "%s\n", message);
-    exit(EXIT_FAILURE);
+    exit(1);
 }
 
 Node* initTree() {
@@ -62,8 +63,7 @@ Node* addNode(Node* root, int value) {
     if (root == NULL) {
         Node* newNode = (Node*)malloc(sizeof(Node));
         if (!newNode) {
-            fprintf(stderr, "nie można zalokować pamięci dla nowego węzła\n");
-            exit(EXIT_FAILURE);
+            reportError("nie można zalokować pamięci dla nowego węzła\n");
         }
         newNode->value = value;
         newNode->left = NULL;
@@ -78,7 +78,7 @@ Node* addNode(Node* root, int value) {
         root->right = addNode(root->right, value);
     }
     else {
-		printf("Wartość %d już istnieje w drzewie. Duplikaty nie są dozwolone.\n", value);
+		printf("Wartość %d już istnieje w drzewie\n", value);
     }
 
     return root;
@@ -86,22 +86,27 @@ Node* addNode(Node* root, int value) {
 
 Node* removeNode(Node* root, int value) {
     if (root == NULL) return NULL;
+
     if (value < root->value) {
         root->left = removeNode(root->left, value);
-    } else if (value > root->value) {
+    } 
+    else if (value > root->value) {
         root->right = removeNode(root->right, value);
-    } else {
+    } 
+    else {
         if (root->left == NULL) {
             Node* temp = root->right;
-			printf("Usunięto węzeł o wartości %d\n", root->value);
             free(root);
+			printf("Usunięto węzeł o wartości %d\n", root->value);
             return temp;
-        } else if (root->right == NULL) {
+        } 
+        else if (root->right == NULL) {
             Node* temp = root->left;
             printf("Usunięto węzeł o wartości %d\n", root->value);
             free(root);
             return temp;
-        } else {
+        } 
+        else {
             Node* succParent = root;
             Node* succ = root->right;
             while (succ->left != NULL) {
@@ -143,19 +148,21 @@ void freeTree(Node* root) {
 
 void saveTree(FILE* file, Node* root) {
     if (root == NULL) {
-        bool marker = false;
+        bool marker = 0;
         if (fwrite(&marker, sizeof(bool), 1, file) != 1) {
             reportError("Błąd zapisu markera do pliku");
         }
         return;
     }
-    bool marker = true;
+
+    bool marker = 1;
     if (fwrite(&marker, sizeof(bool), 1, file) != 1) {
 		reportError("Błąd zapisu markera do pliku");
     }
     if (fwrite(&root->value, sizeof(int), 1, file) != 1) {
 		reportError("Błąd zapisu wartości do pliku");
     }
+
     saveTree(file, root->left);
     saveTree(file, root->right);
 }
@@ -166,7 +173,7 @@ Node* loadTree(FILE* file) {
         if (feof(file)) return NULL;
         reportError("Błąd odczytu markera z pliku");
     }
-    if (marker == false)
+    if (marker == 0)
         return NULL;
     int value;
     if (fread(&value, sizeof(int), 1, file) != 1) {
@@ -183,7 +190,7 @@ Node* loadTree(FILE* file) {
 }
 
 int safeReadInt() {
-    char buf[100];
+    char buf[MAX_STRING_INPUT_LENGTH];
     long val;
     char* endptr;
 
@@ -193,7 +200,7 @@ int safeReadInt() {
             continue;
         }
         val = strtol(buf, &endptr, 10);
-        if (endptr == buf || (*endptr != '\n' && *endptr != '\0')) {
+        if (errno == ERANGE || endptr == buf || (*endptr != '\n' && *endptr != '\0')) {
             printf("Niepoprawny format liczby\nSpróbuj ponownie: ");
             continue;
         }
@@ -204,8 +211,7 @@ int safeReadInt() {
 void safeReadString(char* buffer) {
     while (1) {
         if (!fgets(buffer, MAX_STRING_INPUT_LENGTH + 2, stdin)) {
-            printf("Błąd odczytu napisu\n");
-            exit(1);
+            reportError("Błąd odczytu napisu\n");
         }
 
 		int tempLen = (int)strlen(buffer);
@@ -257,7 +263,11 @@ int main(int argc, char* argv[])
             case 2: {
                 printf("Podaj wartość do usunięcia: ");
                 int value = safeReadInt();
-                tree = removeNode(tree, value);
+                if (findNode(tree, value) == NULL) {
+                    printf("Nie ma węzła o wartości %d w drzewie.\n", value);
+                } else {
+                    tree = removeNode(tree, value);
+                }
                 break;
             }
             case 3: {
@@ -273,9 +283,13 @@ int main(int argc, char* argv[])
                 break;
             }
             case 4: {
-                printf("Elementy drzewa w kolejności rosnącej: ");
-                printTree(tree);
-                printf("\n");
+                if (tree == NULL) {
+                    printf("Drzewo jest puste.\n");
+                } else {
+                    printf("Elementy drzewa w kolejności rosnącej: ");
+                    printTree(tree);
+                    printf("\n");
+                }
                 break;
             }
             case 5: {
