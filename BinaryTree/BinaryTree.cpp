@@ -25,6 +25,8 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - odczyt struktury z pliku binarnego,
 
 Łączenie elementów w drzewo powinno odbywać się przez wskaźniki.
+
+TODO: zapis nazy wpików z polskimi znakami
 */
 
 typedef struct Node {
