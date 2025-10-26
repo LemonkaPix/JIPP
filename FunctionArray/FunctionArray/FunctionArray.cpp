@@ -44,6 +44,11 @@ double safeReadDouble() {
             printf("Niepoprawny format liczby\nSpróbuj ponownie: ");
             continue;
         }
+
+        if (isnan(val) || isinf(val)) {
+            printf("Niepoprawna wartość (NaN lub nieskończoność)\nSpróbuj ponownie: ");
+            continue;
+        }
         return val;
     }
 }
