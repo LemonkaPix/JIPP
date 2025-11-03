@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <ctype.h>
 
-#define MAX_STRING_INPUT_LENGTH 260
+#define MAX_STRING_INPUT_LENGTH 250
 
 int isReservedWindowsName(const char* name) {
     const char* reserved[] = {
@@ -103,7 +103,7 @@ int main() {
         safeReadString(outfile_buf, MAX_STRING_INPUT_LENGTH);
         size_t len = strlen(outfile_buf);
 
-        if (strpbrk(outfile_buf, "\\/:*?\"<>|")) {
+        if (strpbrk(outfile_buf, ":*?\"<>|")) {
             printf("Nazwa pliku zawiera niedozwolone znaki\nSpróbuj ponownie: ");
             continue;
         }
@@ -119,15 +119,10 @@ int main() {
         }
 
         if (isReservedWindowsName(outfile_buf)) {
-            printf("Nazwa pliku jest zarezerwowana w systemie Windows\nSpróbuj ponownie: ");
-            continue;
-        }
-
-
-        if (isReservedWindowsName(outfile_buf)) {
             printf("Niedozwolona nazwa pliku w Windows: '%s'\nPodaj inną nazwę: ", outfile_buf);
             continue;
         }
+
         break;
     }
     outfile = outfile_buf;
