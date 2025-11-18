@@ -58,11 +58,13 @@ void reportError(const char* message) {
     exit(1);
 }
 
-double sinh_series(double x, int M, int* terms_used, int* stopped_by_eps) {
+double sinh_series(double x, int M, int* terms_used, int* stopped_by_eps, int* stopped_by_M) {
     double term = x;
     double sum = term;
     int n = 1;
     *stopped_by_eps = 0;
+    *stopped_by_M = 0;
+    int ended_by_break = 0;
 
     if (M <= 0) {
         *terms_used = 0;
@@ -79,10 +81,23 @@ double sinh_series(double x, int M, int* terms_used, int* stopped_by_eps) {
             reportError("Wykryto wartość nieskończoną lub NaN w obliczeniach. Przerywam program");
         }
 
-        if (fabs(sum - prev_sum) < DBL_EPSILON) {
+        int reachedEps = fabs(sum - prev_sum) < DBL_EPSILON;
+        int reachedM = (n >= M);
+
+        if (reachedEps) {
             *stopped_by_eps = 1;
+        }
+        if (reachedM) {
+            *stopped_by_M = 1;
+        }
+        if (reachedEps || reachedM) {
+            ended_by_break = 1;
             break;
         }
+    }
+
+    if (!ended_by_break && n >= M) {
+        *stopped_by_M = 1;
     }
 
     *terms_used = n;
@@ -131,19 +146,26 @@ int main() {
             reportError("Wartość x jest NaN lub nieskończona. Przerywam program");
         }
 
-        int terms_used, stopped_by_eps;
+        int terms_used, stopped_by_eps, stopped_by_M;
 
-        double f_series = sinh_series(x, M, &terms_used, &stopped_by_eps);
+        double f_series = sinh_series(x, M, &terms_used, &stopped_by_eps, &stopped_by_M);
         double f_exact = sinh(x);
 
         if (isinf(f_series) || isinf(f_exact) || isnan(f_series) || isnan(f_exact)) {
             reportError("Wykryto wartość nieskończoną lub NaN w obliczeniach. Przerywam program");
         }
 
-        fprintf(f, "%.4f\t%.8f\t%.8f\t%d\t%s\n", x, f_series, f_exact, terms_used,
-            stopped_by_eps ? "dokładność" : "limit M");
-        printf("%.4f\t%.8f\t%.8f\t%d\t%s\n", x, f_series, f_exact, terms_used,
-            stopped_by_eps ? "dokładność" : "limit M");
+        const char* stop_reason;
+        if (stopped_by_eps && stopped_by_M) {
+            stop_reason = "dokładność i limit M";
+        } else if (stopped_by_eps) {
+            stop_reason = "dokładność";
+        } else {
+            stop_reason = "limit M";
+        }
+
+        fprintf(f, "%.4f\t%.8f\t%.8f\t%d\t%s\n", x, f_series, f_exact, terms_used, stop_reason);
+        printf("%.4f\t%.8f\t%.8f\t%d\t%s\n", x, f_series, f_exact, terms_used, stop_reason);
     }
 
     fclose(f);

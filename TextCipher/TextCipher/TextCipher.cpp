@@ -242,7 +242,7 @@ int write_file(const char* filename, const unsigned char* data, size_t size) {
 }
 
 int* parse_key_line(char* line, size_t* out_keylen) {
-	size_t capacity = 8;    // na początek alokujemy pamięć dla 8 liczb
+	size_t capacity = 8;    // na początek alokuje pamięć dla 8 liczb
 
     int* key = (int*)malloc(capacity * sizeof(int));
     if (!key) {
