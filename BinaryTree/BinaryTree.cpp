@@ -15,7 +15,6 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - inicjowanie drzewa,
 - dodawanie nowego elementu w określonym miejscu drzewa,
 - pobieranie (i usunięcie) konkretnego elementu z drzewa,
-? pobranie w sensie że element zostaje usunięty z drzewa i zwrócony do programu, czy poprostu zostaje usunięty?
 - wyszukanie podanego elementu,
 ? wyszukanie w sensie że element zostaje zwrócony do programu, czy poprostu sprawdzamy czy istnieje?
 - wypisanie wszystkich elementów drzewa,
@@ -96,7 +95,7 @@ Node* removeNode(Node* root, int value, int* returnedValue) {
         root->right = removeNode(root->right, value, returnedValue);
     }
     else {
-        if (returnedValue) *returnedValue = root->value;
+        if (returnedValue) *returnedValue = root->value;    //zwracanie tej wartości poza funkcję nie ma sensu, bo ta sama wartość jest przekazywana jako argument, ale zostało to dodane ze względu na polecenie
         if (root->left == NULL) {
             Node* temp = root->right;
             free(root);
@@ -128,13 +127,14 @@ Node* removeNode(Node* root, int value, int* returnedValue) {
     return root;
 }
 
-Node* findNode(Node* root, int value) {
+Node* findNode(Node* root, int value, int* depth) {
     if (root == NULL) return NULL;
-    if (value == root->value) return root;
+    if (root->value == value) return root;
+    if (depth) (*depth)++;
     if (value < root->value)
-        return findNode(root->left, value);
+        return findNode(root->left, value, depth);
     else
-        return findNode(root->right, value);
+        return findNode(root->right, value, depth);
 }
 
 void printTree(Node* root) {
@@ -274,27 +274,29 @@ int main(int argc, char* argv[])
             printf("Podaj wartość do usunięcia: ");
             int value = safeReadInt();
 
-            if (findNode(tree, value) == NULL) {
+            int depthCheck = 0;
+            if (findNode(tree, value, &depthCheck) == NULL) {
                 printf("Nie ma węzła o wartości %d w drzewie.\n", value);
             }
 
             else {
                 int deletedValue = 0;
                 tree = removeNode(tree, value, &deletedValue);
-                printf("Usunięto węzeł o wartości %d\n", deletedValue);
+                printf("Usunięto węzeł o wartości %d (głębokość wyszukania: %d)\n", deletedValue, depthCheck);
             }
             break;
         }
         case 3: {
             printf("Podaj wartość do znalezienia: ");
             int value = safeReadInt();
-            Node* found = findNode(tree, value);
+            int depth = 0;
+            Node* found = findNode(tree, value, &depth);
 
             if (found) {
-                printf("Znaleziono węzeł o wartości %d\n", found->value);
+                printf("Znaleziono węzeł o wartości %d na głębokości %d\n", found->value, depth);
             }
             else {
-                printf("Nie znaleziono węzła o wartości %d\n", value);
+                printf("Nie znaleziono węzła o wartości %d (przeszukano do głębokości %d)\n", value, depth);
             }
 
             break;
