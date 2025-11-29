@@ -98,7 +98,7 @@ int main() {
     printf("Podaj koniec przedziału (b): ");
     double b = safeReadDouble();
     printf("Podaj ilość punktów (n): ");
-    // TODO" dodać while
+    
     int n = safeReadInt();
     if (n < 1) {
         reportError("Liczba punktów (n) musi być >= 1");
