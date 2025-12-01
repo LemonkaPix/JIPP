@@ -1,10 +1,12 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
+#include <locale.h>
+#include "BandMatrix.h"
 
 /*
 y = Ax
 
-gdzie ( A = {a_{ij}},; x = {x_i},; y = {y_i},; i,j = 0,1,2,,n-1 )
+gdzie  A = {a_{ij}}, x = {x_i}, y = {y_i}, i,j = 0,1,2,...,n-1 
 
 Ponadto macierz A jest macierzą pasmową. Macierz pasmowa to macierz, w
 której niezerowe elementy skupione są wokół przekątnej. Poniżej
@@ -47,7 +49,7 @@ x x x * 0 0 0
 Do takiej właśnie postaci danych należy dostosować algorytm mnożenia
 macierzy przez wektor. Algorytm zapisz w funkcji.
 
-Uwagi do projektu nr3.
+Uwagi do projektu nr 3.
 − Wszystkie tablice alokowane dynamicznie.
 − Dane czytamy z pliku.
 − Wyniki zapisujemy do pliku i wyświetlamy na monitorze.
@@ -55,114 +57,36 @@ Uwagi do projektu nr3.
 − Program podzielony na kilka plików (co najmniej 2 pliki).
 */
 
-// Prosty zapis wektora y do pliku
-int writeOutput(const char *filename, const double *y, int n) {
-    if (!filename || !y || n <= 0) 
-        return 1;
-
-    FILE *f = fopen(filename, "w");
-
-    if (!f) return 2;
-
-    for (int i = 0; i < n; ++i) {
-        if (fprintf(f, "%.6f\n", y[i]) < 0) {
-            fclose(f); 
-            return 3; 
-        }
-    }
-
-    fclose(f);
-    return 0;
-}
-
 int main() {
+    setlocale(LC_ALL, "");
+
     const char *inputFile = "input.txt";
     const char *outputFile = "output.txt";
 
-    FILE *f = fopen(inputFile, "r");
-    if (!f) {
-        printf("Nie moge otworzyc pliku %s\n", inputFile);
-        return 1;
-    }
-
+    double **A = NULL;
+    double *x = NULL;
+    double *y = NULL;
     int n = 0, m = 0;
-    if (fscanf_s(f, "%d %d", &n, &m) != 2 || n <= 0 || m <= 0) {
-        printf("Blad odczytu n i m\n");
-        fclose(f);
+
+    int r = readInput(inputFile, &A, &x, &n, &m);
+    if (r != 0) {
+        switch (r) {
+        case 1: printf("Błąd %d: Niepoprawne argumenty funkcji odczytu.\n", r); break;
+        case 2: printf("Błąd %d: Nie można otworzyć pliku wejściowego.\n", r); break;
+        case 3: printf("Błąd %d: Niepoprawny odczyt n lub m (wartości ujemne albo brak danych).\n", r); break;
+        case 4: printf("Błąd %d: Alokacja pamięci dla wierszy macierzy \"A\" nie powiodła się.\n", r); break;
+        case 5: printf("Błąd %d: Alokacja pamięci dla kolumn macierzy \"A\" nie powiodła się.\n", r); break;
+        case 6: printf("Błąd %d: Odczyt elementu macierzy \"A\" nie powiódł się.\n", r); break;
+        case 7: printf("Błąd %d: Alokacja pamięci dla wektora \"x\" nie powiodła się.\n", r); break;
+        case 8: printf("Błąd %d: Odczyt elementu wektora \"x\" nie powiódł się.\n", r); break;
+        default: printf("Nieznany błąd odczytu danych o kodzie %d.\n", r); break;
+        }
         return 1;
     }
 
-    double **A = (double**)malloc(sizeof(double*) * n);
-
-    if (!A) { 
-        fclose(f); printf("Blad alokacji wierszy macierzy\n"); 
-        return 1; 
-    }
-
-    for (int i = 0; i < n; ++i) {
-        A[i] = (double*)malloc(sizeof(double) * m);
-
-        if (!A[i]) {
-            printf("Blad alokacji kolumn macierzy\n");
-
-            for (int k = 0; k < i; ++k) 
-                free(A[k]);
-
-            free(A);
-            fclose(f);
-            return 1;
-        }
-    }
-
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < m; ++j) 
-        {
-            if (fscanf_s(f, "%lf", &A[i][j]) != 1) {
-                printf("Blad odczytu macierzy (i=%d, j=%d)\n", i, j);
-
-                for (int k = 0; k < n; ++k)
-                    free(A[k]);
-                free(A);
-
-                fclose(f);
-                return 1;
-            }
-        }
-    }
-
-    double *x = (double*)malloc(sizeof(double) * n);
-
-    if (!x) {
-        printf("Blad alokacji wektora x\n");
-
-        for (int k = 0; k < n; ++k)
-            free(A[k]);
-
-        free(A);
-        fclose(f);
-        return 1;
-    }
-
-    for (int i = 0; i < n; ++i) {
-        if (fscanf_s(f, "%lf", &x[i]) != 1) 
-        {
-            printf("Blad odczytu wektora x (i=%d)\n", i);
-
-            for (int k = 0; k < n; ++k) 
-                free(A[k]);
-
-            free(A);
-            free(x);
-            fclose(f);
-            return 1;
-        }
-    }
-    fclose(f);
-
-    double *y = (double*)malloc(sizeof(double) * n);
-
+    y = (double*)malloc(sizeof(double) * n);
     if (!y) {
-        printf("Blad alokacji wektora y\n");
+        printf("Błąd: Alokacja wektora y nie powiodła się.\n");
 
         for (int k = 0; k < n; ++k) 
             free(A[k]);
@@ -172,20 +96,7 @@ int main() {
         return 1;
     }
 
-    int center = m / 2;
-    for (int i = 0; i < n; ++i) {
-        double sum = 0.0;
-
-		for (int offset = -center; offset <= (m - center - 1); ++offset) {
-            int col = i + offset;
-            int bandIndex = offset + center;
-
-            if (col >= 0 && col < n) {
-                sum += A[i][bandIndex] * x[col];
-            }
-        }
-        y[i] = sum;
-    }
+    multiplyBandMatrixVector(A, x, y, n, m);
 
     printf("Wynik y = A x:\n");
     for (int i = 0; i < n; ++i) {
@@ -194,7 +105,12 @@ int main() {
 
     int err = writeOutput(outputFile, y, n);
     if (err != 0) {
-        printf("Blad zapisu do pliku (kod=%d)\n", err);
+        switch (err) {
+        case 1: printf("Błąd zapisu %d: Niepoprawne argumenty funkcji writeOutput.\n", err); break;
+        case 2: printf("Błąd zapisu %d: Nie można otworzyć pliku wyjściowego.\n", err); break;
+        case 3: printf("Błąd zapisu %d: Zapis do pliku nie powiódł się.\n", err); break;
+        default: printf("Nieznany błąd zapisu o kodzie %d.\n", err); break;
+        }
     } else {
         printf("Wynik zapisany do pliku %s\n", outputFile);
     }
