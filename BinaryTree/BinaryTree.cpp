@@ -16,7 +16,6 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - dodawanie nowego elementu w określonym miejscu drzewa,
 - pobieranie (i usunięcie) konkretnego elementu z drzewa,
 - wyszukanie podanego elementu,
-? wyszukanie w sensie że element zostaje zwrócony do programu, czy poprostu sprawdzamy czy istnieje?
 - wypisanie wszystkich elementów drzewa,
 - usunięcie całej struktury (wszystkich elementów) – zwolnienie pamięci;
 - zakończenie programu - usunięcie wszystkich elementów;
@@ -24,8 +23,6 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - odczyt struktury z pliku binarnego,
 
 Łączenie elementów w drzewo powinno odbywać się przez wskaźniki.
-
-TODO: zapis nazy wpików z polskimi znakami
 */
 
 typedef struct Node {
