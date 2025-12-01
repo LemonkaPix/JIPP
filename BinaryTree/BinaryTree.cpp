@@ -15,9 +15,7 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - inicjowanie drzewa,
 - dodawanie nowego elementu w określonym miejscu drzewa,
 - pobieranie (i usunięcie) konkretnego elementu z drzewa,
-? pobranie w sensie że element zostaje usunięty z drzewa i zwrócony do programu, czy poprostu zostaje usunięty?
 - wyszukanie podanego elementu,
-? wyszukanie w sensie że element zostaje zwrócony do programu, czy poprostu sprawdzamy czy istnieje?
 - wypisanie wszystkich elementów drzewa,
 - usunięcie całej struktury (wszystkich elementów) – zwolnienie pamięci;
 - zakończenie programu - usunięcie wszystkich elementów;
@@ -25,8 +23,6 @@ Napisz funkcje realizujące następujące funkcjonalności:
 - odczyt struktury z pliku binarnego,
 
 Łączenie elementów w drzewo powinno odbywać się przez wskaźniki.
-
-TODO: zapis nazy wpików z polskimi znakami
 */
 
 typedef struct Node {
@@ -80,34 +76,33 @@ Node* addNode(Node* root, int value) {
         root->right = addNode(root->right, value);
     }
     else {
-		printf("Wartość %d już istnieje w drzewie\n", value);
+        printf("Wartość %d już istnieje w drzewie\n", value);
     }
 
     return root;
 }
 
-Node* removeNode(Node* root, int value) {
+Node* removeNode(Node* root, int value, int* returnedValue) {
     if (root == NULL) return NULL;
 
     if (value < root->value) {
-        root->left = removeNode(root->left, value);
-    } 
+        root->left = removeNode(root->left, value, returnedValue);
+    }
     else if (value > root->value) {
-        root->right = removeNode(root->right, value);
-    } 
+        root->right = removeNode(root->right, value, returnedValue);
+    }
     else {
+        if (returnedValue) *returnedValue = root->value;    //zwracanie tej wartości poza funkcję nie ma sensu, bo ta sama wartość jest przekazywana jako argument, ale zostało to dodane ze względu na polecenie
         if (root->left == NULL) {
             Node* temp = root->right;
             free(root);
-			printf("Usunięto węzeł o wartości %d\n", root->value);
             return temp;
-        } 
+        }
         else if (root->right == NULL) {
             Node* temp = root->left;
-            printf("Usunięto węzeł o wartości %d\n", root->value);
             free(root);
             return temp;
-        } 
+        }
         else {
             Node* succParent = root;
             Node* succ = root->right;
@@ -116,22 +111,27 @@ Node* removeNode(Node* root, int value) {
                 succ = succ->left;
             }
             root->value = succ->value;
-            if (succParent != root)
-                succParent->left = removeNode(succParent->left, succ->value);
-            else
-                succParent->right = removeNode(succParent->right, succ->value);
+
+            int dummy = 0;
+            if (succParent != root) {
+                succParent->left = removeNode(succParent->left, succ->value, &dummy);
+            }
+            else {
+                succParent->right = removeNode(succParent->right, succ->value, &dummy);
+            }
         }
     }
     return root;
 }
 
-Node* findNode(Node* root, int value) {
+Node* findNode(Node* root, int value, int* depth) {
     if (root == NULL) return NULL;
-    if (value == root->value) return root;
+    if (root->value == value) return root;
+    if (depth) (*depth)++;
     if (value < root->value)
-        return findNode(root->left, value);
+        return findNode(root->left, value, depth);
     else
-        return findNode(root->right, value);
+        return findNode(root->right, value, depth);
 }
 
 void printTree(Node* root) {
@@ -159,10 +159,11 @@ void saveTree(FILE* file, Node* root) {
 
     bool marker = 1;
     if (fwrite(&marker, sizeof(bool), 1, file) != 1) {
-		reportError("Błąd zapisu markera do pliku");
+        reportError("Błąd zapisu markera do pliku");
     }
+
     if (fwrite(&root->value, sizeof(int), 1, file) != 1) {
-		reportError("Błąd zapisu wartości do pliku");
+        reportError("Błąd zapisu wartości do pliku");
     }
 
     saveTree(file, root->left);
@@ -175,16 +176,20 @@ Node* loadTree(FILE* file) {
         if (feof(file)) return NULL;
         reportError("Błąd odczytu markera z pliku");
     }
+
     if (marker == 0)
         return NULL;
+
     int value;
     if (fread(&value, sizeof(int), 1, file) != 1) {
         reportError("Błąd odczytu wartośći z pliku");
     }
+
     Node* node = (Node*)malloc(sizeof(Node));
     if (!node) {
-		reportError("Błąd alokacji pamięci podczas odczytu drzewa");
+        reportError("Błąd alokacji pamięci podczas odczytu drzewa");
     }
+
     node->value = value;
     node->left = loadTree(file);
     node->right = loadTree(file);
@@ -216,7 +221,7 @@ void safeReadString(char* buffer) {
             reportError("Błąd odczytu napisu\n");
         }
 
-		int tempLen = (int)strlen(buffer);
+        int tempLen = (int)strlen(buffer);
 
         if (strchr(buffer, '\n') == NULL) {
             int c;
@@ -224,6 +229,7 @@ void safeReadString(char* buffer) {
             printf("Przekroczono maksymalną długość napisu %zu znaków\nSpróbuj ponownie: ", MAX_STRING_INPUT_LENGTH);
             continue;
         }
+
         buffer[strcspn(buffer, "\n")] = '\0';
         if (strlen(buffer) == 0) continue;
 
@@ -240,158 +246,167 @@ int main(int argc, char* argv[])
 
     while (true) {
         printf("Wybierz akcję:\n");
-		printf("1. Dodaj węzeł\n");
-		printf("2. Usuń węzeł\n");
-		printf("3. Znajdź węzeł\n");
-		printf("4. Wypisz drzewo\n");
-		printf("5. Usuń drzewo\n");
-		printf("6. Zapisz drzewo do pliku\n");
-		printf("7. Wczytaj drzewo z pliku\n");
-		printf("8. Zakończ program\n");
+        printf("1. Dodaj węzeł\n");
+        printf("2. Usuń węzeł\n");
+        printf("3. Znajdź węzeł\n");
+        printf("4. Wypisz drzewo\n");
+        printf("5. Usuń drzewo\n");
+        printf("6. Zapisz drzewo do pliku\n");
+        printf("7. Wczytaj drzewo z pliku\n");
+        printf("8. Zakończ program\n");
 
-		int choice = safeReadInt();
+        int choice = safeReadInt();
 
         system("cls");
 
-
         switch (choice)
         {
-            case 1: {
-                printf("Podaj wartość do dodania: ");
-                int value = safeReadInt();
-                tree = addNode(tree, value);
-                break;
+        case 1: {
+            printf("Podaj wartość do dodania: ");
+            int value = safeReadInt();
+            tree = addNode(tree, value);
+            break;
+        }
+        case 2: {
+            printf("Podaj wartość do usunięcia: ");
+            int value = safeReadInt();
+
+            int depthCheck = 0;
+            if (findNode(tree, value, &depthCheck) == NULL) {
+                printf("Nie ma węzła o wartości %d w drzewie.\n", value);
             }
-            case 2: {
-                printf("Podaj wartość do usunięcia: ");
-                int value = safeReadInt();
-                if (findNode(tree, value) == NULL) {
-                    printf("Nie ma węzła o wartości %d w drzewie.\n", value);
-                } else {
-                    tree = removeNode(tree, value);
-                }
-                break;
+
+            else {
+                int deletedValue = 0;
+                tree = removeNode(tree, value, &deletedValue);
+                printf("Usunięto węzeł o wartości %d (głębokość wyszukania: %d)\n", deletedValue, depthCheck);
             }
-            case 3: {
-                printf("Podaj wartość do znalezienia: ");
-                int value = safeReadInt();
-                Node* found = findNode(tree, value);
-                if (found) {
-                    printf("Znaleziono węzeł o wartości %d\n", found->value);
-                }
-                else {
-                    printf("Nie znaleziono węzła o wartości %d\n", value);
-                }
-                break;
+            break;
+        }
+        case 3: {
+            printf("Podaj wartość do znalezienia: ");
+            int value = safeReadInt();
+            int depth = 0;
+            Node* found = findNode(tree, value, &depth);
+
+            if (found) {
+                printf("Znaleziono węzeł o wartości %d na głębokości %d\n", found->value, depth);
             }
-            case 4: {
-                if (tree == NULL) {
-                    printf("Drzewo jest puste.\n");
-                } else {
-                    printf("Elementy drzewa w kolejności rosnącej: ");
-                    printTree(tree);
-                    printf("\n");
-                }
-                break;
+            else {
+                printf("Nie znaleziono węzła o wartości %d (przeszukano do głębokości %d)\n", value, depth);
             }
-            case 5: {
-                freeTree(tree);
-                tree = NULL;
-                printf("Usunięto całe drzewo.\n");
-                break;
-		    }
-            case 6: {
-                printf("Podaj nazwę pliku do zapisu (zakończoną .bin): ");
-                char filename[MAX_STRING_INPUT_LENGTH];
-                while (true)
-                {
-                    safeReadString(filename);
-                    size_t len = strlen(filename);
-                    const char* ext = ".bin";
 
-                    if (len < 5 || strcmp(filename + len - 4, ext) != 0) {
-                        printf("Plik musi mieć rozszerzenie .bin\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    if (strpbrk(filename, "\\/:*?\"<>|")) {
-                        printf("Nazwa pliku zawiera niedozwolone znaki\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    if (filename[0] == ' ' || filename[0] == '.') {
-                        printf("Nazwa pliku nie może zaczynać się od spacji ani kropki\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    if (filename[len - 5] == ' ' || filename[len - 5] == '.') {
-                        printf("Nazwa pliku nie może kończyć się spacją ani kropką\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    if (isReservedWindowsName(filename)) {
-                        printf("Nazwa pliku jest zarezerwowana w systemie Windows\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    break;
-                }
-
-
-                FILE* file = fopen(filename, "wb");
-                if (!file) {
-                    printf("Nie można otworzyć pliku do zapisu!\n");
-                    break;
-                }
-
-                saveTree(file, tree);
-                fclose(file);
-                printf("Drzewo zapisane do pliku %s\n", filename);
-                break;
+            break;
+        }
+        case 4: {
+            if (tree == NULL) {
+                printf("Drzewo jest puste.\n");
             }
-            case 7:
+            else {
+                printf("Elementy drzewa w kolejności rosnącej: ");
+                printTree(tree);
+                printf("\n");
+            }
+            break;
+        }
+        case 5: {
+            freeTree(tree);
+            tree = NULL;
+            printf("Usunięto całe drzewo.\n");
+            break;
+        }
+        case 6: {
+            printf("Podaj nazwę pliku do zapisu (zakończoną .bin): ");
+            char filename[MAX_STRING_INPUT_LENGTH];
+            while (true)
             {
-                printf("Podaj nazwę pliku do wczytania z rozszerzeniem .bin: ");
-                char filename[MAX_STRING_INPUT_LENGTH];
-                while (true)
-                {
-                    safeReadString(filename);
-                    size_t len = strlen(filename);
-                    const char* ext = ".bin";
-                    if (len < 5 || strcmp(filename + len - 4, ext) != 0) {
-                        printf("Plik musi mieć rozszerzenie .bin\nSpróbuj ponownie: ");
-                        continue;
-                    }
+                safeReadString(filename);
+                size_t len = strlen(filename);
+                const char* ext = ".bin";
 
-                    if (isReservedWindowsName(filename)) {
-                        printf("Plik jest zarezerwowany przez system Windows\nSpróbuj ponownie: ");
-                        continue;
-                    }
-
-                    break;
-
+                if (len < 5 || strcmp(filename + len - 4, ext) != 0) {
+                    printf("Plik musi mieć rozszerzenie .bin\nSpróbuj ponownie: ");
+                    continue;
                 }
-			    FILE* file = fopen(filename, "rb");
-                if (!file) {
-                    printf("Nie można otworzyć pliku do odczytu!\n");
-                    break;
+
+                if (strpbrk(filename, "\\/:*?\"<>|")) {
+                    printf("Nazwa pliku zawiera niedozwolone znaki\nSpróbuj ponownie: ");
+                    continue;
                 }
-                freeTree(tree);
-                tree = loadTree(file);
-                fclose(file);
-                printf("Drzewo wczytane z pliku %s\n", filename);
-			    break;
+
+                if (filename[0] == ' ' || filename[0] == '.') {
+                    printf("Nazwa pliku nie może zaczynać się od spacji ani kropki\nSpróbuj ponownie: ");
+                    continue;
+                }
+
+                if (filename[len - 5] == ' ' || filename[len - 5] == '.') {
+                    printf("Nazwa pliku nie może kończyć się spacją ani kropką\nSpróbuj ponownie: ");
+                    continue;
+                }
+
+                if (isReservedWindowsName(filename)) {
+                    printf("Nazwa pliku jest zarezerwowana w systemie Windows\nSpróbuj ponownie: ");
+                    continue;
+                }
+
+                break;
             }
-            case 8:
-            {
-                freeTree(tree);
-                printf("Zakończenie programu.\n");
-                return 0;
-		    }
-            default:
-            {
-                printf("Niepoprawny wybór, spróbuj ponownie.\n");
+
+
+            FILE* file = fopen(filename, "wb");
+            if (!file) {
+                printf("Nie można otworzyć pliku do zapisu!\n");
+                break;
             }
+
+            saveTree(file, tree);
+            fclose(file);
+            printf("Drzewo zapisane do pliku %s\n", filename);
+            break;
+        }
+        case 7:
+        {
+            printf("Podaj nazwę pliku do wczytania z rozszerzeniem .bin: ");
+            char filename[MAX_STRING_INPUT_LENGTH];
+            while (true)
+            {
+                safeReadString(filename);
+                size_t len = strlen(filename);
+                const char* ext = ".bin";
+                if (len < 5 || strcmp(filename + len - 4, ext) != 0) {
+                    printf("Plik musi mieć rozszerzenie .bin\nSpróbuj ponownie: ");
+                    continue;
+                }
+
+                if (isReservedWindowsName(filename)) {
+                    printf("Plik jest zarezerwowany przez system Windows\nSpróbuj ponownie: ");
+                    continue;
+                }
+
+                break;
+
+            }
+            FILE* file = fopen(filename, "rb");
+            if (!file) {
+                printf("Nie można otworzyć pliku do odczytu!\n");
+                break;
+            }
+            freeTree(tree);
+            tree = loadTree(file);
+            fclose(file);
+            printf("Drzewo wczytane z pliku %s\n", filename);
+            break;
+        }
+        case 8:
+        {
+            freeTree(tree);
+            printf("Zakończenie programu.\n");
+            return 0;
+        }
+        default:
+        {
+            printf("Niepoprawny wybór, spróbuj ponownie.\n");
+        }
         }
 
         printf("\n");
