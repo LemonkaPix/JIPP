@@ -6,7 +6,7 @@
 /*
 y = Ax
 
-gdzie ( A = {a_{ij}},; x = {x_i},; y = {y_i},; i,j = 0,1,2,,n-1 )
+gdzie  A = {a_{ij}}, x = {x_i}, y = {y_i}, i,j = 0,1,2,...,n-1 
 
 Ponadto macierz A jest macierzą pasmową. Macierz pasmowa to macierz, w
 której niezerowe elementy skupione są wokół przekątnej. Poniżej
@@ -49,7 +49,7 @@ x x x * 0 0 0
 Do takiej właśnie postaci danych należy dostosować algorytm mnożenia
 macierzy przez wektor. Algorytm zapisz w funkcji.
 
-Uwagi do projektu nr3.
+Uwagi do projektu nr 3.
 − Wszystkie tablice alokowane dynamicznie.
 − Dane czytamy z pliku.
 − Wyniki zapisujemy do pliku i wyświetlamy na monitorze.
