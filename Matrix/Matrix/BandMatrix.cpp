@@ -23,9 +23,12 @@ void multiplyBandMatrixVector(double **A, const double *x, double *y, int n, int
     int center = m / 2;
     for (int i = 0; i < n; ++i) {
         double sum = 0.0;
+
         for (int offset = -center; offset <= (m - center - 1); ++offset) {
+
             int col = i + offset;
             int bandIndex = offset + center;
+
             if (col >= 0 && col < n) {
                 sum += A[i][bandIndex] * x[col];
             }
